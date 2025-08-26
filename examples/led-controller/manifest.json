@@ -1,0 +1,17 @@
+{
+  "manifest_version": "1.0",
+  "name": "led-controller",
+  "description": "Advanced GPIO controller for LEDs, buttons, and sensors with PWM support",
+  "version": "1.0.0",
+  "author": "T-Embed SDK Team",
+  "main": "app.js",
+  "permissions": [
+    "gpio.read",
+    "gpio.write",
+    "ui.create",
+    "storage.read",
+    "storage.write"
+  ],
+  "icon": "app.png",
+  "category": "hardware"
+}

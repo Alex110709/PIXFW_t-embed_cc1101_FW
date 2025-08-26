@@ -1,0 +1,45 @@
+{
+  "name": "t-embed-cc1101-sdk",
+  "version": "1.0.0",
+  "description": "JavaScript SDK for T-Embed CC1101 development",
+  "main": "index.js",
+  "scripts": {
+    "create-app": "node tools/create-app.js",
+    "validate-app": "node tools/validate-app.js",
+    "build-app": "node tools/build-app.js",
+    "install-app": "node tools/install-app.js",
+    "test": "node tools/test-runner.js"
+  },
+  "keywords": [
+    "t-embed",
+    "cc1101",
+    "javascript",
+    "esp32",
+    "rf",
+    "iot"
+  ],
+  "author": "T-Embed CC1101 Development Team",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^9.4.1",
+    "inquirer": "^8.2.5",
+    "fs-extra": "^10.1.0",
+    "node-json-minify": "^3.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "eslint": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-repo/t-embed-cc1101-fw"
+  },
+  "bugs": {
+    "url": "https://github.com/your-repo/t-embed-cc1101-fw/issues"
+  },
+  "homepage": "https://github.com/your-repo/t-embed-cc1101-fw#readme"
+}

@@ -1,0 +1,14 @@
+{
+  "manifest_version": "1.0",
+  "name": "ui-showcase",
+  "description": "Showcase of T-Embed UI components and capabilities",
+  "version": "1.0.0",
+  "author": "T-Embed SDK Team",
+  "main": "app.js",
+  "permissions": [
+    "ui.create",
+    "storage.write"
+  ],
+  "icon": "app.png",
+  "category": "utility"
+}

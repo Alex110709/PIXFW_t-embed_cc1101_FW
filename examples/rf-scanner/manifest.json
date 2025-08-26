@@ -1,0 +1,16 @@
+{
+  "manifest_version": "1.0",
+  "name": "rf-scanner",
+  "description": "Advanced RF signal scanner with frequency sweeping and signal analysis",
+  "version": "1.0.0",
+  "author": "T-Embed SDK Team",
+  "main": "app.js",
+  "permissions": [
+    "rf.receive",
+    "rf.transmit",
+    "ui.create",
+    "storage.write"
+  ],
+  "icon": "app.png",
+  "category": "rf"
+}
