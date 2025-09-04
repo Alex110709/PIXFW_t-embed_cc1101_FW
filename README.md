@@ -12,6 +12,7 @@ ESP32-S3 기반 LilyGO T-Embed CC1101을 위한 JavaScript 앱 지원 펌웨어�
 - ASK/OOK, GFSK, MSK 변조 방식
 - 실시간 RF 스캐닝 및 신호 분석
 - 신호 송수신 및 프로토콜 디코딩
+- RF Jammer 및 Spectrum Analyzer 기능 (Bruce 펌웨어 호환)
 
 ### 🛠️ JavaScript 앱 개발 환경
 - mJS 경량 JavaScript 엔진
@@ -22,7 +23,7 @@ ESP32-S3 기반 LilyGO T-Embed CC1101을 위한 JavaScript 앱 지원 펌웨어�
 ### 🖥️ 사용자 인터페이스
 - LVGL 기반 그래픽 UI (1.9" LCD 170x320)
 - 로터리 엔코더 및 버튼 입력 지원
-- 직관적인 메뉴 시스템
+- Flipper Zero 스타일 직관적인 메뉴 시스템
 - 상태 표시줄 및 알림 시스템
 
 ### 🌐 네트워킹 지원
@@ -111,6 +112,15 @@ rf.setReceiveCallback((signal) => {
 // 신호 송신
 const data = [0x12, 0x34, 0x56, 0x78];
 rf.transmit(data);
+
+// RF Jammer
+rf.startJammer(433920000);
+rf.stopJammer();
+
+// Spectrum Analyzer
+rf.startSpectrumAnalyzer(433000000, 434000000, 100000);
+const rssi = rf.getRssiAtFrequency(433920000);
+rf.stopSpectrumAnalyzer();
 ```
 
 ### UI 개발 API
@@ -141,6 +151,31 @@ const content = storage.readText("/apps/data.txt");
 storage.setConfig("frequency", "433920000");
 const freq = storage.getConfig("frequency", "433920000");
 ```
+
+## 📱 코어 앱 (Flipper Zero 스타일)
+
+### RF Scanner
+주파수 대역에서 RF 신호를 스캔하고 분석합니다.
+- 방향키로 주파수 선택
+- OK 버튼으로 스캔 시작/중지
+
+### RF Jammer
+지정된 주파수에서 RF 간섭을 생성합니다.
+- 방향키로 주파수 선택
+- 위/아래 버튼으로 점머 모드 선택
+- OK 버튼으로 점머 시작/중지
+
+### Spectrum Analyzer
+주파수 스펙트럼을 분석하고 시각화합니다.
+- 방향키로 주파수 범위 선택
+- 위/아래 버튼으로 단계 크기 선택
+- OK 버튼으로 분석 시작/중지
+
+### Signal Generator
+사용자 정의 RF 신호를 생성합니다.
+- 방향키로 주파수 선택
+- 위/아래 버튼으로 변조 방식 선택
+- OK 버튼으로 신호 전송
 
 ## 🏗️ 프로젝트 구조
 
@@ -173,6 +208,7 @@ cc1101-fw/
 - 주파수 및 변조 설정
 - 송수신 버퍼 관리
 - 프리셋 설정 지원
+- Jammer 및 Spectrum Analyzer 기능
 
 ### JavaScript 엔진 (mJS)
 - 경량 JavaScript 런타임
@@ -198,64 +234,3 @@ cc1101-fw/
 각 JavaScript 앱은 격리된 환경에서 실행됩니다:
 
 - **메모리 제한**: 앱당 최대 64KB
-- **실행 시간 제한**: 연속 실행 5초
-- **파일 접근 제한**: `/apps/` 디렉토리만 접근 가능
-- **API 권한**: manifest.json에 선언된 권한만 사용 가능
-
-### 권한 시스템
-
-```json
-{
-  "name": "RF Scanner",
-  "version": "1.0.0",
-  "permissions": [
-    "rf.receive",
-    "rf.transmit", 
-    "storage.read",
-    "ui.create"
-  ]
-}
-```
-
-## 🧪 테스트
-
-```bash
-# 빌드 테스트
-./build.sh test
-
-# 정적 분석
-make analyze
-
-# 코드 포맷 확인
-make format
-```
-
-## 🤝 기여하기
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 라이선스
-
-이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
-
-## 🙏 감사의 말
-
-- [ESP-IDF](https://github.com/espressif/esp-idf) - Espressif IoT Development Framework
-- [LVGL](https://github.com/lvgl/lvgl) - Light and Versatile Graphics Library  
-- [mJS](https://github.com/cesanta/mjs) - Embedded JavaScript engine
-- [LilyGO](https://github.com/Xinyuan-LilyGO) - T-Embed 하드웨어 플랫폼
-
-## 📞 지원
-
-- 📧 이메일: support@example.com
-- 💬 Discord: [링크]
-- 📖 문서: [GitHub Wiki](https://github.com/your-repo/cc1101-fw/wiki)
-- 🐛 버그 리포트: [GitHub Issues](https://github.com/your-repo/cc1101-fw/issues)
-
----
-
-**⚠️ 주의사항**: 이 펌웨어를 사용할 때는 해당 지역의 전파 법규를 준수해야 합니다. Sub-GHz 주파수 사용에 대한 규정을 확인하세요.

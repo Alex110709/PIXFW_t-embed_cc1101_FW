@@ -204,6 +204,95 @@ static mjs_val_t js_rf_load_preset(struct mjs *mjs)
     return MJS_UNDEFINED;
 }
 
+/**
+ * rf.startJammer(frequency)
+ * Start RF jammer at specified frequency
+ */
+static mjs_val_t js_rf_start_jammer(struct mjs *mjs)
+{
+    double frequency;
+    if (js_get_number_arg(mjs, 0, &frequency) != ESP_OK) {
+        return js_make_error(mjs, "Invalid frequency parameter");
+    }
+    
+    esp_err_t ret = cc1101_start_jammer((uint32_t)frequency);
+    if (ret != ESP_OK) {
+        return js_make_error(mjs, "Failed to start jammer");
+    }
+    
+    ESP_LOGI(TAG, "Started jammer at %.0f Hz", frequency);
+    return MJS_UNDEFINED;
+}
+
+/**
+ * rf.stopJammer()
+ * Stop RF jammer
+ */
+static mjs_val_t js_rf_stop_jammer(struct mjs *mjs)
+{
+    esp_err_t ret = cc1101_stop_jammer();
+    if (ret != ESP_OK) {
+        return js_make_error(mjs, "Failed to stop jammer");
+    }
+    
+    ESP_LOGI(TAG, "Stopped jammer");
+    return MJS_UNDEFINED;
+}
+
+/**
+ * rf.startSpectrumAnalyzer(startFreq, stopFreq, stepSize)
+ * Start spectrum analyzer
+ */
+static mjs_val_t js_rf_start_spectrum_analyzer(struct mjs *mjs)
+{
+    double start_freq, stop_freq, step_size;
+    
+    if (js_get_number_arg(mjs, 0, &start_freq) != ESP_OK ||
+        js_get_number_arg(mjs, 1, &stop_freq) != ESP_OK ||
+        js_get_number_arg(mjs, 2, &step_size) != ESP_OK) {
+        return js_make_error(mjs, "Invalid parameters");
+    }
+    
+    esp_err_t ret = cc1101_start_spectrum_analysis((uint32_t)start_freq, (uint32_t)stop_freq, (uint32_t)step_size);
+    if (ret != ESP_OK) {
+        return js_make_error(mjs, "Failed to start spectrum analyzer");
+    }
+    
+    ESP_LOGI(TAG, "Started spectrum analyzer: %.0f-%.0f Hz, step %.0f Hz", 
+             start_freq, stop_freq, step_size);
+    return MJS_UNDEFINED;
+}
+
+/**
+ * rf.stopSpectrumAnalyzer()
+ * Stop spectrum analyzer
+ */
+static mjs_val_t js_rf_stop_spectrum_analyzer(struct mjs *mjs)
+{
+    esp_err_t ret = cc1101_stop_spectrum_analysis();
+    if (ret != ESP_OK) {
+        return js_make_error(mjs, "Failed to stop spectrum analyzer");
+    }
+    
+    ESP_LOGI(TAG, "Stopped spectrum analyzer");
+    return MJS_UNDEFINED;
+}
+
+/**
+ * rf.getRssiAtFrequency(frequency)
+ * Get RSSI at specific frequency
+ */
+static mjs_val_t js_rf_get_rssi_at_frequency(struct mjs *mjs)
+{
+    double frequency;
+    if (js_get_number_arg(mjs, 0, &frequency) != ESP_OK) {
+        return js_make_error(mjs, "Invalid frequency parameter");
+    }
+    
+    int16_t rssi = cc1101_get_rssi_at_frequency((uint32_t)frequency);
+    return mjs_mk_number(mjs, (double)rssi);
+}
+
 esp_err_t js_rf_api_init(void)
 {
     ESP_LOGI(TAG, "Initializing RF API");
@@ -229,6 +318,11 @@ esp_err_t js_rf_api_register(js_context_t *ctx)
     mjs_set_ffi_func(mjs, "rf.getRssi", js_rf_get_rssi);
     mjs_set_ffi_func(mjs, "rf.isPresent", js_rf_is_present);
     mjs_set_ffi_func(mjs, "rf.loadPreset", js_rf_load_preset);
+    mjs_set_ffi_func(mjs, "rf.startJammer", js_rf_start_jammer);
+    mjs_set_ffi_func(mjs, "rf.stopJammer", js_rf_stop_jammer);
+    mjs_set_ffi_func(mjs, "rf.startSpectrumAnalyzer", js_rf_start_spectrum_analyzer);
+    mjs_set_ffi_func(mjs, "rf.stopSpectrumAnalyzer", js_rf_stop_spectrum_analyzer);
+    mjs_set_ffi_func(mjs, "rf.getRssiAtFrequency", js_rf_get_rssi_at_frequency);
     
     ESP_LOGI(TAG, "RF API functions registered");
     return ESP_OK;

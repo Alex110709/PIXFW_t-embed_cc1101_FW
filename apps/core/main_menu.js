@@ -1,121 +1,111 @@
 /**
  * @file main_menu.js
- * @brief Main Menu Application
+ * @brief Main Menu Application (Flipper Zero Style)
  * 
  * This is the core menu application that provides navigation
- * to all other apps and system functions.
+ * to all other apps and system functions with Flipper Zero style UI.
  */
 
 // Main menu configuration
 const MENU_ITEMS = [
     {
         id: 'rf_scanner',
-        title: 'RF Scanner',
-        icon: '📡',
-        description: 'Scan for RF signals'
+        title: 'RF Scanner'
+    },
+    {
+        id: 'rf_jammer',
+        title: 'RF Jammer'
+    },
+    {
+        id: 'spectrum_analyzer',
+        title: 'Spectrum Analyzer'
     },
     {
         id: 'signal_generator',
-        title: 'Signal Generator', 
-        icon: '📢',
-        description: 'Generate RF signals'
+        title: 'Signal Generator'
     },
     {
         id: 'apps',
-        title: 'Apps',
-        icon: '📱',
-        description: 'JavaScript Apps'
+        title: 'Apps'
     },
     {
         id: 'wifi_settings',
-        title: 'Wi-Fi',
-        icon: '📶',
-        description: 'Wi-Fi Settings'
+        title: 'Wi-Fi'
     },
     {
         id: 'system_settings',
-        title: 'Settings',
-        icon: '⚙️',
-        description: 'System Settings'
+        title: 'Settings'
     },
     {
         id: 'about',
-        title: 'About',
-        icon: 'ℹ️',
-        description: 'System Information'
+        title: 'About'
     }
 ];
 
 let currentMenuIndex = 0;
 let menuScreen = null;
-let statusBar = null;
+let menuList = null;
 
 // Initialize main menu
 function initMainMenu() {
-    console.log("Initializing main menu...");
+    console.log("Initializing main menu (Flipper Zero style)...");
     
     // Create main screen
     menuScreen = ui.createScreen();
+    ui.setStyle(menuScreen, 'bg_color', '#000000');
     
-    // Create status bar
-    statusBar = ui.createStatusBar(menuScreen);
+    // Create title bar
+    const titleBar = ui.createContainer(menuScreen);
+    ui.setSize(titleBar, 170, 20);
+    ui.setPosition(titleBar, 0, 0);
+    ui.setStyle(titleBar, 'bg_color', '#1976D2');
+    
+    const titleLabel = ui.createLabel(titleBar, "[Main Menu]");
+    ui.setPosition(titleLabel, 5, 2);
+    ui.setStyle(titleLabel, 'text_color', '#FFFFFF');
+    ui.setStyle(titleLabel, 'text_font', 'bold');
     
     // Create menu list
     createMenuList();
     
+    // Create status bar
+    createStatusBar();
+    
     // Set up input handling
     setupInputHandlers();
     
-    // Update status bar
-    updateStatusBar();
-    
+    ui.setActiveScreen(menuScreen);
     console.log("Main menu initialized");
 }
 
 // Create menu list UI
 function createMenuList() {
-    const listContainer = ui.createContainer(menuScreen);
-    ui.setPosition(listContainer, 0, 30); // Below status bar
-    ui.setSize(listContainer, 170, 290);
+    menuList = ui.createList(menuScreen);
+    ui.setSize(menuList, 170, 240);
+    ui.setPosition(menuList, 0, 20);
+    ui.setStyle(menuList, 'bg_color', '#000000');
     
-    // Create menu items
+    // Add menu items to list
     for (let i = 0; i < MENU_ITEMS.length; i++) {
         const item = MENU_ITEMS[i];
-        const menuItem = createMenuItem(listContainer, item, i);
-        
-        // Highlight first item
-        if (i === 0) {
-            ui.setStyle(menuItem, 'bg_color', '#2196F3');
-        }
+        ui.addListItem(menuList, item.title);
     }
+    
+    // Select first item
+    ui.setListSelectedIndex(menuList, 0);
 }
 
-// Create individual menu item
-function createMenuItem(parent, item, index) {
-    const itemContainer = ui.createContainer(parent);
-    ui.setSize(itemContainer, 170, 40);
-    ui.setPosition(itemContainer, 0, index * 42);
-    ui.setStyle(itemContainer, 'border_width', 1);
-    ui.setStyle(itemContainer, 'border_color', '#333333');
+// Create status bar
+function createStatusBar() {
+    const statusBar = ui.createContainer(menuScreen);
+    ui.setSize(statusBar, 170, 30);
+    ui.setPosition(statusBar, 0, 290);
+    ui.setStyle(statusBar, 'bg_color', '#000000');
     
-    // Icon
-    const iconLabel = ui.createLabel(itemContainer, item.icon);
-    ui.setPosition(iconLabel, 10, 10);
-    ui.setStyle(iconLabel, 'text_color', '#FFFFFF');
-    
-    // Title
-    const titleLabel = ui.createLabel(itemContainer, item.title);
-    ui.setPosition(titleLabel, 40, 8);
-    ui.setStyle(titleLabel, 'text_color', '#FFFFFF');
-    ui.setStyle(titleLabel, 'text_font', 'bold');
-    
-    // Description
-    const descLabel = ui.createLabel(itemContainer, item.description);
-    ui.setPosition(descLabel, 40, 22);
-    ui.setStyle(descLabel, 'text_color', '#CCCCCC');
-    ui.setStyle(descLabel, 'text_font', 'small');
-    
-    return itemContainer;
+    const statusLabel = ui.createLabel(statusBar, "[↑↓: Navigate] [OK: Select]");
+    ui.setPosition(statusLabel, 5, 10);
+    ui.setStyle(statusLabel, 'text_color', '#888888');
+    ui.setStyle(statusLabel, 'text_font', 'small');
 }
 
 // Set up input event handlers
@@ -142,50 +132,34 @@ function setupInputHandlers() {
     
     // Button 2 for quick actions
     input.onButton('BUTTON2', () => {
-        showQuickActions();
+        // For now, exit the app
+        app.exit();
     });
 }
 
 // Navigate menu up
 function navigateUp() {
-    if (currentMenuIndex > 0) {
-        updateMenuSelection(currentMenuIndex - 1);
+    let currentIndex = ui.getListSelectedIndex(menuList);
+    if (currentIndex > 0) {
+        ui.setListSelectedIndex(menuList, currentIndex - 1);
+        notify.vibrate(50); // Haptic feedback
     }
 }
 
 // Navigate menu down  
 function navigateDown() {
-    if (currentMenuIndex < MENU_ITEMS.length - 1) {
-        updateMenuSelection(currentMenuIndex + 1);
+    let currentIndex = ui.getListSelectedIndex(menuList);
+    if (currentIndex < MENU_ITEMS.length - 1) {
+        ui.setListSelectedIndex(menuList, currentIndex + 1);
+        notify.vibrate(50); // Haptic feedback
     }
-}
-
-// Update menu selection highlight
-function updateMenuSelection(newIndex) {
-    // Remove highlight from current item
-    const currentItem = getMenuItemContainer(currentMenuIndex);
-    ui.setStyle(currentItem, 'bg_color', '#1E1E1E');
-    
-    // Add highlight to new item
-    const newItem = getMenuItemContainer(newIndex);
-    ui.setStyle(newItem, 'bg_color', '#2196F3');
-    
-    currentMenuIndex = newIndex;
-    
-    // Show haptic feedback
-    notify.vibrate(50);
-}
-
-// Get menu item container by index
-function getMenuItemContainer(index) {
-    // This would return the actual UI container object
-    // Implementation depends on UI framework
-    return ui.getChildByIndex(menuScreen, index + 1); // +1 for status bar
 }
 
 // Select current menu item
 function selectCurrentItem() {
-    const selectedItem = MENU_ITEMS[currentMenuIndex];
+    const selectedIndex = ui.getListSelectedIndex(menuList);
+    const selectedItem = MENU_ITEMS[selectedIndex];
+    
     console.log("Selected:", selectedItem.title);
     
     // Show selection feedback
@@ -196,121 +170,144 @@ function selectCurrentItem() {
         case 'rf_scanner':
             launchRFScanner();
             break;
+        case 'rf_jammer':
+            launchRFJammer();
+            break;
+        case 'spectrum_analyzer':
+            launchSpectrumAnalyzer();
+            break;
         case 'signal_generator':
             launchSignalGenerator();
             break;
         case 'apps':
-            showAppsMenu();
+            launchApps();
             break;
         case 'wifi_settings':
-            showWiFiSettings();
+            launchWiFiSettings();
             break;
         case 'system_settings':
-            showSystemSettings();
+            launchSystemSettings();
             break;
         case 'about':
-            showAboutScreen();
+            showSystemInfo();
             break;
         default:
-            notify.show("Info", "Feature not implemented yet", 2000);
+            console.log("Unknown menu item:", selectedItem.id);
+            notify.showError("Feature not implemented");
     }
 }
 
-// Launch RF Scanner
+// Launch RF Scanner app
 function launchRFScanner() {
-    console.log("Launching RF Scanner...");
-    
-    // Load and execute RF scanner app
     try {
-        // This would load the actual RF scanner JavaScript app
-        notify.show("RF Scanner", "Starting RF Scanner...", 1000);
-        
-        // For now, show a placeholder
-        setTimeout(() => {
-            showRFScannerPlaceholder();
-        }, 1000);
-        
+        // Load and run the RF scanner app
+        const scannerApp = require('/apps/core/rf_scanner.js');
+        // In a real implementation, we would start the app in a new context
+        console.log("Launching RF Scanner app");
+        notify.show("Launching RF Scanner");
     } catch (error) {
-        console.log("Error launching RF Scanner:", error);
-        notify.show("Error", "Failed to start RF Scanner", 3000);
+        console.error("Failed to launch RF Scanner:", error);
+        notify.showError("Failed to launch RF Scanner: " + error.message);
     }
 }
 
-// Show RF Scanner placeholder
-function showRFScannerPlaceholder() {
-    const scanScreen = ui.createScreen();
-    
-    const titleLabel = ui.createLabel(scanScreen, "RF Scanner");
-    ui.setPosition(titleLabel, 10, 50);
-    ui.setStyle(titleLabel, 'text_color', '#FFFFFF');
-    ui.setStyle(titleLabel, 'text_font', 'large');
-    
-    const statusLabel = ui.createLabel(scanScreen, "Scanning 433.92 MHz...");
-    ui.setPosition(statusLabel, 10, 100);
-    ui.setStyle(statusLabel, 'text_color', '#00FF00');
-    
-    const rssiLabel = ui.createLabel(scanScreen, "RSSI: -75 dBm");
-    ui.setPosition(rssiLabel, 10, 130);
-    ui.setStyle(rssiLabel, 'text_color', '#FFFF00');
-    
-    const backLabel = ui.createLabel(scanScreen, "Press Button 1 to return");
-    ui.setPosition(backLabel, 10, 200);
-    ui.setStyle(backLabel, 'text_color', '#CCCCCC');
-    ui.setStyle(backLabel, 'text_font', 'small');
-    
-    ui.setActiveScreen(scanScreen);
-    
-    // Set up back navigation
-    input.onButton('BUTTON1', () => {
-        ui.setActiveScreen(menuScreen);
-    });
+// Launch RF Jammer app
+function launchRFJammer() {
+    try {
+        // Load and run the jammer app
+        const jammerApp = require('/apps/core/jammer.js');
+        // In a real implementation, we would start the app in a new context
+        console.log("Launching RF Jammer app");
+        notify.show("Launching RF Jammer");
+    } catch (error) {
+        console.error("Failed to launch RF Jammer:", error);
+        notify.showError("Failed to launch RF Jammer: " + error.message);
+    }
 }
 
-// Update status bar information
-function updateStatusBar() {
-    if (!statusBar) return;
-    
-    // Get current time (placeholder)
-    const now = new Date();
-    const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
-                   now.getMinutes().toString().padStart(2, '0');
-    
-    // Get Wi-Fi status
-    const wifiConnected = false; // This would check actual Wi-Fi status
-    
-    // Get battery level (placeholder)
-    const batteryLevel = 85;
-    
-    ui.updateStatusBar(statusBar, wifiConnected, batteryLevel, timeStr);
+// Launch Spectrum Analyzer app
+function launchSpectrumAnalyzer() {
+    try {
+        // Load and run the spectrum analyzer app
+        const spectrumApp = require('/apps/core/spectrum_analyzer.js');
+        // In a real implementation, we would start the app in a new context
+        console.log("Launching Spectrum Analyzer app");
+        notify.show("Launching Spectrum Analyzer");
+    } catch (error) {
+        console.error("Failed to launch Spectrum Analyzer:", error);
+        notify.showError("Failed to launch Spectrum Analyzer: " + error.message);
+    }
+}
+
+// Launch Signal Generator app
+function launchSignalGenerator() {
+    try {
+        // Load and run the signal generator app
+        const generatorApp = require('/apps/core/signal_generator.js');
+        // In a real implementation, we would start the app in a new context
+        console.log("Launching Signal Generator app");
+        notify.show("Launching Signal Generator");
+    } catch (error) {
+        console.error("Failed to launch Signal Generator:", error);
+        notify.showError("Failed to launch Signal Generator: " + error.message);
+    }
+}
+
+// Launch Apps menu
+function launchApps() {
+    try {
+        // Load and run the apps menu
+        const appsMenu = require('/apps/core/apps_menu.js');
+        // In a real implementation, we would start the app in a new context
+        console.log("Launching Apps menu");
+        notify.show("Launching Apps");
+    } catch (error) {
+        console.error("Failed to launch Apps menu:", error);
+        notify.showError("Failed to launch Apps: " + error.message);
+    }
+}
+
+// Launch Wi-Fi settings
+function launchWiFiSettings() {
+    try {
+        // Load and run the Wi-Fi settings app
+        const wifiSettings = require('/apps/core/wifi_settings.js');
+        // In a real implementation, we would start the app in a new context
+        console.log("Launching Wi-Fi Settings");
+        notify.show("Launching Wi-Fi Settings");
+    } catch (error) {
+        console.error("Failed to launch Wi-Fi Settings:", error);
+        notify.showError("Failed to launch Wi-Fi Settings: " + error.message);
+    }
+}
+
+// Launch system settings
+function launchSystemSettings() {
+    try {
+        // Load and run the system settings app
+        const systemSettings = require('/apps/core/system_settings.js');
+        // In a real implementation, we would start the app in a new context
+        console.log("Launching System Settings");
+        notify.show("Launching System Settings");
+    } catch (error) {
+        console.error("Failed to launch System Settings:", error);
+        notify.showError("Failed to launch System Settings: " + error.message);
+    }
 }
 
 // Show system information
 function showSystemInfo() {
-    const info = [
-        "T-Embed CC1101 v1.0.0",
-        "ESP32-S3 @ 240MHz", 
-        "Free RAM: " + system.getFreeHeap() + " bytes",
-        "Uptime: " + system.getUptime() + " seconds"
-    ].join("\n");
-    
-    notify.show("System Info", info, 5000);
+    try {
+        // Load and run the about app
+        const aboutApp = require('/apps/core/about.js');
+        // In a real implementation, we would start the app in a new context
+        console.log("Showing System Info");
+        notify.show("Showing System Info");
+    } catch (error) {
+        console.error("Failed to show System Info:", error);
+        notify.showError("Failed to show System Info: " + error.message);
+    }
 }
 
-// Show quick actions menu
-function showQuickActions() {
-    // Quick toggle for common functions
-    notify.show("Quick Actions", "Wi-Fi | RF | Apps", 2000);
-}
-
-// Initialize the menu when app starts
+// App entry point
 initMainMenu();
-
-// Export functions for other apps to use
-if (typeof module !== 'undefined') {
-    module.exports = {
-        initMainMenu,
-        navigateUp,
-        navigateDown,
-        selectCurrentItem
-    };
-}

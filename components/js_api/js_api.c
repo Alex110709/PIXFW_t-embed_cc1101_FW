@@ -26,6 +26,7 @@ esp_err_t js_api_init(void)
     ESP_ERROR_CHECK(js_ui_api_init());
     ESP_ERROR_CHECK(js_storage_api_init());
     ESP_ERROR_CHECK(js_notification_api_init());
+    ESP_ERROR_CHECK(js_wifi_api_init());
     
     s_initialized = true;
     ESP_LOGI(TAG, "JavaScript API modules initialized");
@@ -60,6 +61,7 @@ esp_err_t js_api_register_all(js_context_t *ctx)
     ESP_ERROR_CHECK(js_ui_api_register(ctx));
     ESP_ERROR_CHECK(js_storage_api_register(ctx));
     ESP_ERROR_CHECK(js_notification_api_register(ctx));
+    ESP_ERROR_CHECK(js_wifi_api_register(ctx));
     
     ESP_LOGI(TAG, "All API functions registered");
     

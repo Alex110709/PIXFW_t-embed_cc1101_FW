@@ -405,3 +405,81 @@ bool cc1101_is_present(void)
     // Version should be 0x14 for CC1101
     return (partnum == 0x00 && version == 0x14);
 }
+
+// Spectrum Analyzer functions
+
+static bool s_spectrum_analysis_running = false;
+static uint32_t s_spectrum_start_freq = 0;
+static uint32_t s_spectrum_stop_freq = 0;
+static uint32_t s_spectrum_step_size = 0;
+
+esp_err_t cc1101_start_spectrum_analysis(uint32_t start_frequency, uint32_t stop_frequency, uint32_t step_size)
+{
+    if (!s_initialized) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (start_frequency > stop_frequency || step_size == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    s_spectrum_start_freq = start_frequency;
+    s_spectrum_stop_freq = stop_frequency;
+    s_spectrum_step_size = step_size;
+    s_spectrum_analysis_running = true;
+
+    ESP_LOGI(TAG, "Started spectrum analysis: %u Hz to %u Hz, step %u Hz", 
+             start_frequency, stop_frequency, step_size);
+    
+    return ESP_OK;
+}
+
+esp_err_t cc1101_stop_spectrum_analysis(void)
+{
+    if (!s_initialized) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    s_spectrum_analysis_running = false;
+    
+    ESP_LOGI(TAG, "Stopped spectrum analysis");
+    return ESP_OK;
+}
+
+bool cc1101_is_spectrum_analysis_running(void)
+{
+    return s_spectrum_analysis_running;
+}
+
+int16_t cc1101_get_rssi_at_frequency(uint32_t frequency)
+{
+    if (!s_initialized) {
+        return -128;
+    }
+
+    // Set the frequency
+    uint8_t freq2, freq1, freq0;
+    cc1101_calc_freq_regs(frequency, &freq2, &freq1, &freq0);
+    
+    // Store current frequency to restore later
+    uint32_t current_freq = s_config.frequency_hz;
+    
+    // Set new frequency
+    ESP_ERROR_CHECK(cc1101_spi_write_reg(CC1101_FREQ2, freq2));
+    ESP_ERROR_CHECK(cc1101_spi_write_reg(CC1101_FREQ1, freq1));
+    ESP_ERROR_CHECK(cc1101_spi_write_reg(CC1101_FREQ0, freq0));
+    
+    // Wait a bit for frequency to settle
+    vTaskDelay(pdMS_TO_TICKS(2));
+    
+    // Get RSSI
+    int16_t rssi = cc1101_get_rssi();
+    
+    // Restore original frequency
+    cc1101_calc_freq_regs(current_freq, &freq2, &freq1, &freq0);
+    cc1101_spi_write_reg(CC1101_FREQ2, freq2);
+    cc1101_spi_write_reg(CC1101_FREQ1, freq1);
+    cc1101_spi_write_reg(CC1101_FREQ0, freq0);
+    
+    return rssi;
+}

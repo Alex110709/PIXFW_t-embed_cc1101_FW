@@ -274,6 +274,12 @@ esp_err_t cc1101_load_preset_ask_ook(uint32_t frequency);
 esp_err_t cc1101_load_preset_gfsk(uint32_t frequency);
 esp_err_t cc1101_load_preset_msk(uint32_t frequency);
 
+// Spectrum Analyzer functions
+esp_err_t cc1101_start_spectrum_analysis(uint32_t start_frequency, uint32_t stop_frequency, uint32_t step_size);
+esp_err_t cc1101_stop_spectrum_analysis(void);
+bool cc1101_is_spectrum_analysis_running(void);
+int16_t cc1101_get_rssi_at_frequency(uint32_t frequency);
+
 #ifdef __cplusplus
 }
 #endif

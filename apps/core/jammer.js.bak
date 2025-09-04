@@ -1,0 +1,201 @@
+/**
+ * RF Jammer App for T-Embed CC1101
+ * Implements continuous RF jamming functionality similar to Bruce firmware
+ */
+
+// App state
+let appState = {
+    isJamming: false,
+    frequency: 433920000, // Default frequency
+    jammerType: "full" // "full" or "intermittent"
+};
+
+// UI elements
+let ui = {};
+
+// App initialization
+function init() {
+    console.log("RF Jammer App starting...");
+    
+    try {
+        createUI();
+        updateStatus("Ready - RF Jammer");
+        
+        console.log("RF Jammer App initialized successfully");
+    } catch (error) {
+        console.error("RF Jammer App initialization error:", error);
+        Notification.showError("RF Jammer failed to start: " + error.message);
+    }
+}
+
+// Create user interface
+function createUI() {
+    const screen = UI.getScreen();
+    const container = UI.createContainer(screen);
+    UI.setContainerLayout(container, UI.LAYOUT_FLEX_COLUMN);
+    
+    // Status display
+    ui.statusLabel = UI.createLabel(container, "RF Jammer Ready");
+    UI.setLabelStyle(ui.statusLabel, {
+        fontSize: 16,
+        fontWeight: "bold",
+        textAlign: "center",
+        marginBottom: 20
+    });
+    
+    // Frequency input
+    const freqContainer = UI.createContainer(container);
+    UI.setContainerLayout(freqContainer, UI.LAYOUT_FLEX_ROW);
+    
+    ui.freqLabel = UI.createLabel(freqContainer, "Frequency (Hz):");
+    UI.setLabelStyle(ui.freqLabel, { minWidth: 120 });
+    
+    ui.freqInput = UI.createInput(freqContainer);
+    UI.setInputText(ui.freqInput, appState.frequency.toString());
+    UI.setInputType(ui.freqInput, UI.INPUT_TYPE_NUMBER);
+    
+    // Jammer type selection
+    const typeContainer = UI.createContainer(container);
+    UI.setContainerLayout(typeContainer, UI.LAYOUT_FLEX_ROW);
+    
+    ui.typeLabel = UI.createLabel(typeContainer, "Jammer Type:");
+    UI.setLabelStyle(ui.typeLabel, { minWidth: 120 });
+    
+    ui.typeSelect = UI.createSelect(typeContainer);
+    UI.setSelectOptions(ui.typeSelect, ["Full", "Intermittent"]);
+    UI.setSelectValue(ui.typeSelect, "Full");
+    
+    // Control buttons
+    const buttonContainer = UI.createContainer(container);
+    UI.setContainerLayout(buttonContainer, UI.LAYOUT_FLEX_ROW);
+    
+    ui.startButton = UI.createButton(buttonContainer, "Start Jamming");
+    ui.stopButton = UI.createButton(buttonContainer, "Stop Jamming");
+    
+    UI.setButtonCallback(ui.startButton, startJamming);
+    UI.setButtonCallback(ui.stopButton, stopJamming);
+    
+    // Disable stop button initially
+    UI.setButtonEnabled(ui.stopButton, false);
+    
+    // Current status
+    ui.currentStatus = UI.createLabel(container, "Status: Stopped");
+    UI.setLabelStyle(ui.currentStatus, { 
+        fontSize: 14, 
+        marginTop: 20,
+        textAlign: "center"
+    });
+}
+
+// Start jamming
+function startJamming() {
+    try {
+        // Get frequency from input
+        const freqStr = UI.getInputText(ui.freqInput);
+        const frequency = parseInt(freqStr);
+        
+        if (isNaN(frequency) || frequency < 300000000 || frequency > 928000000) {
+            Notification.showError("Invalid frequency. Please enter a value between 300MHz and 928MHz.");
+            return;
+        }
+        
+        appState.frequency = frequency;
+        
+        // Get jammer type
+        const typeStr = UI.getSelectValue(ui.typeSelect);
+        appState.jammerType = typeStr.toLowerCase();
+        
+        // Start jammer
+        if (appState.jammerType === "full") {
+            RF.startJammer(appState.frequency);
+        } else {
+            // For intermittent jammer, we would need a different implementation
+            // For now, we'll just use the full jammer
+            RF.startJammer(appState.frequency);
+        }
+        
+        appState.isJamming = true;
+        updateStatus(`Jamming at ${formatFrequency(appState.frequency)}`);
+        UI.setLabelText(ui.currentStatus, `Status: Jamming at ${formatFrequency(appState.frequency)}`);
+        
+        // Update button states
+        UI.setButtonEnabled(ui.startButton, false);
+        UI.setButtonEnabled(ui.stopButton, true);
+        
+        Notification.show(`Started jamming at ${formatFrequency(appState.frequency)}`, 2000);
+        
+    } catch (error) {
+        console.error("Failed to start jamming:", error);
+        Notification.showError("Failed to start jamming: " + error.message);
+    }
+}
+
+// Stop jamming
+function stopJamming() {
+    try {
+        RF.stopJammer();
+        
+        appState.isJamming = false;
+        updateStatus("Jamming stopped");
+        UI.setLabelText(ui.currentStatus, "Status: Stopped");
+        
+        // Update button states
+        UI.setButtonEnabled(ui.startButton, true);
+        UI.setButtonEnabled(ui.stopButton, false);
+        
+        Notification.show("Jamming stopped", 2000);
+        
+    } catch (error) {
+        console.error("Failed to stop jamming:", error);
+        Notification.showError("Failed to stop jamming: " + error.message);
+    }
+}
+
+// Format frequency for display
+function formatFrequency(freq) {
+    if (freq >= 1000000) {
+        return (freq / 1000000).toFixed(3) + " MHz";
+    } else if (freq >= 1000) {
+        return (freq / 1000).toFixed(3) + " kHz";
+    } else {
+        return freq + " Hz";
+    }
+}
+
+// UI update functions
+function updateStatus(status) {
+    UI.setLabelText(ui.statusLabel, status);
+}
+
+// Cleanup function
+function cleanup() {
+    console.log("Cleaning up RF Jammer App...");
+    if (appState.isJamming) {
+        stopJamming();
+    }
+}
+
+// Event handlers
+function setupEventHandlers() {
+    System.onBackButton(function() {
+        console.log("Stopping RF Jammer App...");
+        cleanup();
+        System.exit();
+    });
+    
+    System.onPause(function() {
+        console.log("RF Jammer App paused");
+        if (appState.isJamming) {
+            stopJamming();
+        }
+    });
+    
+    System.onResume(function() {
+        console.log("RF Jammer App resumed");
+        updateStatus("Resumed - RF Jammer");
+    });
+}
+
+// App entry point
+init();
+setupEventHandlers();

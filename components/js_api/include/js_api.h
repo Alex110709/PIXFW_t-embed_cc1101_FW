@@ -38,6 +38,7 @@ esp_err_t js_gpio_api_init(void);
 esp_err_t js_ui_api_init(void);
 esp_err_t js_storage_api_init(void);
 esp_err_t js_notification_api_init(void);
+esp_err_t js_wifi_api_init(void);
 
 // Module registration functions
 esp_err_t js_rf_api_register(js_context_t *ctx);
@@ -45,6 +46,7 @@ esp_err_t js_gpio_api_register(js_context_t *ctx);
 esp_err_t js_ui_api_register(js_context_t *ctx);
 esp_err_t js_storage_api_register(js_context_t *ctx);
 esp_err_t js_notification_api_register(js_context_t *ctx);
+esp_err_t js_wifi_api_register(js_context_t *ctx);
 
 // Utility functions for type conversion
 mjs_val_t js_make_error(struct mjs *mjs, const char *message);

@@ -1,9 +1,9 @@
 /**
  * @file rf_scanner.js
- * @brief RF Scanner Application
+ * @brief RF Scanner Application (Flipper Zero Style)
  * 
  * Scans for RF signals across different frequencies and displays
- * signal information including RSSI, frequency, and data.
+ * signal information with Flipper Zero style UI.
  */
 
 // Scanner configuration
@@ -14,16 +14,9 @@ const SCAN_FREQUENCIES = [
     { freq: 915000000, name: "915 MHz" }
 ];
 
-const SCAN_MODES = [
-    { id: 'auto', name: 'Auto Scan', description: 'Scan all frequencies' },
-    { id: 'manual', name: 'Manual', description: 'Select frequency manually' },
-    { id: 'analyze', name: 'Analyze', description: 'Analyze current frequency' }
-];
-
 let scannerState = {
     isScanning: false,
-    currentFreqIndex: 0,
-    currentMode: 'auto',
+    currentFreqIndex: 1, // Default to 433.92 MHz
     signalHistory: [],
     screen: null,
     lastRSSI: -100,
@@ -32,11 +25,11 @@ let scannerState = {
 
 // Initialize RF Scanner
 function initRFScanner() {
-    console.log("Initializing RF Scanner...");
+    console.log("Initializing RF Scanner (Flipper Zero style)...");
     
     // Check if RF module is available
-    if (!rf.isPresent()) {
-        notify.show("Error", "CC1101 module not detected", 3000);
+    if (!RF.isPresent()) {
+        Notification.show("Error: CC1101 not detected", 3000);
         return false;
     }
     
@@ -55,86 +48,70 @@ function initRFScanner() {
 
 // Create scanner user interface
 function createScannerUI() {
-    scannerState.screen = ui.createScreen();
-    ui.setStyle(scannerState.screen, 'bg_color', '#000000');
+    scannerState.screen = UI.getScreen();
+    UI.setScreenStyle(scannerState.screen, { bg_color: '#000000' });
     
     // Title bar
-    const titleBar = ui.createContainer(scannerState.screen);
-    ui.setSize(titleBar, 170, 30);
-    ui.setPosition(titleBar, 0, 0);
-    ui.setStyle(titleBar, 'bg_color', '#1976D2');
+    const titleBar = UI.createContainer(scannerState.screen);
+    UI.setSize(titleBar, 170, 20);
+    UI.setPosition(titleBar, 0, 0);
+    UI.setContainerStyle(titleBar, { bg_color: '#1976D2' });
     
-    const titleLabel = ui.createLabel(titleBar, "RF Scanner");
-    ui.setPosition(titleLabel, 5, 5);
-    ui.setStyle(titleLabel, 'text_color', '#FFFFFF');
-    ui.setStyle(titleLabel, 'text_font', 'bold');
+    const titleLabel = UI.createLabel(titleBar, "[RF Scanner]");
+    UI.setPosition(titleLabel, 5, 2);
+    UI.setLabelStyle(titleLabel, { 
+        text_color: '#FFFFFF', 
+        font_size: 10,
+        font_weight: 'bold'
+    });
     
     // Frequency display
-    const freqContainer = ui.createContainer(scannerState.screen);
-    ui.setSize(freqContainer, 170, 40);
-    ui.setPosition(freqContainer, 0, 35);
-    ui.setStyle(freqContainer, 'border_width', 1);
-    ui.setStyle(freqContainer, 'border_color', '#333333');
-    
-    const freqLabel = ui.createLabel(freqContainer, "433.92 MHz");
-    ui.setPosition(freqLabel, 10, 10);
-    ui.setStyle(freqLabel, 'text_color', '#00FF00');
-    ui.setStyle(freqLabel, 'text_font', 'large');
-    scannerState.freqLabel = freqLabel;
+    scannerState.freqLabel = UI.createLabel(scannerState.screen, SCAN_FREQUENCIES[scannerState.currentFreqIndex].name);
+    UI.setPosition(scannerState.freqLabel, 10, 30);
+    UI.setLabelStyle(scannerState.freqLabel, { 
+        text_color: '#00FF00',
+        font_size: 16,
+        font_weight: 'bold'
+    });
     
     // RSSI display
-    const rssiContainer = ui.createContainer(scannerState.screen);
-    ui.setSize(rssiContainer, 170, 60);
-    ui.setPosition(rssiContainer, 0, 80);
-    ui.setStyle(rssiContainer, 'border_width', 1);
-    ui.setStyle(rssiContainer, 'border_color', '#333333');
+    scannerState.rssiLabel = UI.createLabel(scannerState.screen, "RSSI: --- dBm");
+    UI.setPosition(scannerState.rssiLabel, 10, 60);
+    UI.setLabelStyle(scannerState.rssiLabel, { 
+        text_color: '#FFFF00',
+        font_size: 14
+    });
     
-    const rssiLabel = ui.createLabel(rssiContainer, "RSSI: --- dBm");
-    ui.setPosition(rssiLabel, 10, 10);
-    ui.setStyle(rssiLabel, 'text_color', '#FFFF00');
-    scannerState.rssiLabel = rssiLabel;
+    // Status display
+    scannerState.statusLabel = UI.createLabel(scannerState.screen, "[Stopped]");
+    UI.setPosition(scannerState.statusLabel, 10, 90);
+    UI.setLabelStyle(scannerState.statusLabel, { 
+        text_color: '#FFFFFF',
+        font_size: 14
+    });
     
-    // RSSI bar
-    const rssiBar = ui.createProgressBar(rssiContainer, 140);
-    ui.setPosition(rssiBar, 10, 35);
-    scannerState.rssiBar = rssiBar;
+    // Signal count
+    scannerState.signalLabel = UI.createLabel(scannerState.screen, "Signals: 0");
+    UI.setPosition(scannerState.signalLabel, 10, 120);
+    UI.setLabelStyle(scannerState.signalLabel, { 
+        text_color: '#CCCCCC',
+        font_size: 14
+    });
     
-    // Signal info display
-    const infoContainer = ui.createContainer(scannerState.screen);
-    ui.setSize(infoContainer, 170, 80);
-    ui.setPosition(infoContainer, 0, 145);
-    ui.setStyle(infoContainer, 'border_width', 1);
-    ui.setStyle(infoContainer, 'border_color', '#333333');
+    // Status bar
+    const statusBar = UI.createContainer(scannerState.screen);
+    UI.setSize(statusBar, 170, 30);
+    UI.setPosition(statusBar, 0, 290);
+    UI.setContainerStyle(statusBar, { bg_color: '#000000' });
     
-    const statusLabel = ui.createLabel(infoContainer, "Status: Ready");
-    ui.setPosition(statusLabel, 10, 10);
-    ui.setStyle(statusLabel, 'text_color', '#FFFFFF');
-    scannerState.statusLabel = statusLabel;
+    scannerState.statusBarLabel = UI.createLabel(statusBar, "[←→: Frequency] [OK: Start/Stop]");
+    UI.setPosition(scannerState.statusBarLabel, 5, 10);
+    UI.setLabelStyle(scannerState.statusBarLabel, { 
+        text_color: '#888888',
+        font_size: 8
+    });
     
-    const signalLabel = ui.createLabel(infoContainer, "Signals: 0");
-    ui.setPosition(signalLabel, 10, 30);
-    ui.setStyle(signalLabel, 'text_color', '#CCCCCC');
-    scannerState.signalLabel = signalLabel;
-    
-    const timeLabel = ui.createLabel(infoContainer, "Time: 00:00");
-    ui.setPosition(timeLabel, 10, 50);
-    ui.setStyle(timeLabel, 'text_color', '#CCCCCC');
-    scannerState.timeLabel = timeLabel;
-    
-    // Control instructions
-    const controlsContainer = ui.createContainer(scannerState.screen);
-    ui.setSize(controlsContainer, 170, 50);
-    ui.setPosition(controlsContainer, 0, 230);
-    
-    const controlsLabel = ui.createLabel(controlsContainer, 
-        "🔄 Encoder: Frequency\n" +
-        "🔘 Press: Start/Stop\n" +
-        "📝 Btn1: Mode  📤 Btn2: Menu");
-    ui.setPosition(controlsLabel, 5, 5);
-    ui.setStyle(controlsLabel, 'text_color', '#888888');
-    ui.setStyle(controlsLabel, 'text_font', 'small');
-    
-    ui.setActiveScreen(scannerState.screen);
+    UI.setActiveScreen(scannerState.screen);
 }
 
 // Setup RF module configuration
@@ -142,15 +119,11 @@ function setupRFModule() {
     console.log("Setting up RF module...");
     
     // Load default preset
-    rf.loadPreset("gfsk_433");
+    RF.loadPreset("gfsk_433");
     
     // Set initial frequency
-    rf.setFrequency(SCAN_FREQUENCIES[0].freq);
-    
-    // Set up receive callback
-    rf.setReceiveCallback((signal) => {
-        handleReceivedSignal(signal);
-    });
+    const currentFreq = SCAN_FREQUENCIES[scannerState.currentFreqIndex];
+    RF.setFrequency(currentFreq.freq);
     
     updateFrequencyDisplay();
 }
@@ -158,7 +131,7 @@ function setupRFModule() {
 // Set up input handlers
 function setupScannerInput() {
     // Encoder for frequency selection
-    input.onEncoder((direction) => {
+    System.onEncoder((direction) => {
         if (!scannerState.isScanning) {
             if (direction === 'CW') {
                 changeFrequency(1);
@@ -169,7 +142,7 @@ function setupScannerInput() {
     });
     
     // Encoder press to start/stop scanning
-    input.onButton('ENCODER', () => {
+    System.onButton('ENCODER', () => {
         if (scannerState.isScanning) {
             stopScanning();
         } else {
@@ -178,15 +151,16 @@ function setupScannerInput() {
     });
     
     // Button 1 for mode change
-    input.onButton('BUTTON1', () => {
-        changeScanMode();
+    System.onButton('BUTTON1', () => {
+        // For now, just show a notification
+        Notification.show("Mode change not implemented", 1000);
     });
     
     // Button 2 for back to menu
-    input.onButton('BUTTON2', () => {
+    System.onButton('BUTTON2', () => {
         stopScanning();
         // Return to main menu
-        app.exit();
+        System.exit();
     });
 }
 
@@ -198,200 +172,138 @@ function changeFrequency(direction) {
         scannerState.currentFreqIndex = newIndex;
         const newFreq = SCAN_FREQUENCIES[newIndex];
         
-        rf.setFrequency(newFreq.freq);
+        // Update RF module frequency
+        RF.setFrequency(newFreq.freq);
+        
+        // Update display
         updateFrequencyDisplay();
         
-        notify.vibrate(30);
-        console.log("Changed to frequency:", newFreq.name);
+        // Haptic feedback
+        Notification.vibrate(50);
     }
 }
 
 // Update frequency display
 function updateFrequencyDisplay() {
     const currentFreq = SCAN_FREQUENCIES[scannerState.currentFreqIndex];
-    ui.setText(scannerState.freqLabel, currentFreq.name);
+    UI.setLabelText(scannerState.freqLabel, currentFreq.name);
 }
 
-// Start scanning for signals
+// Start scanning
 function startScanning() {
-    console.log("Starting RF scan...");
+    if (scannerState.isScanning) return;
     
     scannerState.isScanning = true;
     scannerState.scanStartTime = Date.now();
-    scannerState.signalHistory = [];
     
     // Update UI
-    ui.setText(scannerState.statusLabel, "Status: Scanning...");
-    ui.setStyle(scannerState.freqLabel, 'text_color', '#FF9800');
+    UI.setLabelText(scannerState.statusLabel, "[Scanning...]");
+    UI.setLabelText(scannerState.statusBarLabel, "[OK: Stop] [Back: Exit]");
     
     // Start receiving
-    rf.startReceive();
+    RF.startReceive();
     
-    // Start RSSI monitoring
-    startRSSIMonitoring();
+    // Start scanning loop
+    scanLoop();
     
-    notify.show("Scanner", "Scanning started", 1000);
+    console.log("Started scanning");
 }
 
 // Stop scanning
 function stopScanning() {
-    console.log("Stopping RF scan...");
+    if (!scannerState.isScanning) return;
     
     scannerState.isScanning = false;
     
-    // Stop receiving
-    rf.stopReceive();
-    
     // Update UI
-    ui.setText(scannerState.statusLabel, "Status: Stopped");
-    ui.setStyle(scannerState.freqLabel, 'text_color', '#00FF00');
+    UI.setLabelText(scannerState.statusLabel, "[Stopped]");
+    UI.setLabelText(scannerState.statusBarLabel, "[←→: Frequency] [OK: Start/Stop]");
     
-    // Show scan results
-    showScanResults();
+    // Stop receiving
+    RF.stopReceive();
     
-    notify.show("Scanner", "Scanning stopped", 1000);
+    console.log("Stopped scanning");
 }
 
-// Start RSSI monitoring
-function startRSSIMonitoring() {
-    const updateRSSI = () => {
-        if (!scannerState.isScanning) return;
-        
-        const rssi = rf.getRssi();
+// Scanning loop
+function scanLoop() {
+    if (!scannerState.isScanning) return;
+    
+    try {
+        // Get RSSI
+        const rssi = RF.getRssi();
         scannerState.lastRSSI = rssi;
         
         // Update RSSI display
-        ui.setText(scannerState.rssiLabel, `RSSI: ${rssi} dBm`);
+        UI.setLabelText(scannerState.rssiLabel, `RSSI: ${rssi} dBm`);
         
-        // Update RSSI bar (convert -100 to 0 dBm to 0-100%)
-        const rssiPercent = Math.max(0, Math.min(100, (rssi + 100) / 0.6));
-        ui.setProgress(scannerState.rssiBar, rssiPercent);
+        // Check for signals
+        const signal = RF.readSignal();
+        if (signal !== null) {
+            // Add to signal history
+            scannerState.signalHistory.push({
+                frequency: SCAN_FREQUENCIES[scannerState.currentFreqIndex].freq,
+                rssi: rssi,
+                timestamp: Date.now()
+            });
+            
+            // Update signal count
+            UI.setLabelText(scannerState.signalLabel, `Signals: ${scannerState.signalHistory.length}`);
+            
+            // Show notification
+            Notification.show(`Signal detected: ${rssi} dBm`, 1000);
+        }
         
-        // Color code RSSI
-        let color = '#FF0000'; // Red for weak
-        if (rssi > -80) color = '#FF9800'; // Orange for medium
-        if (rssi > -60) color = '#FFFF00'; // Yellow for good
-        if (rssi > -40) color = '#00FF00'; // Green for strong
+        // Schedule next scan
+        setTimeout(scanLoop, 100);
         
-        ui.setStyle(scannerState.rssiLabel, 'text_color', color);
-        
-        // Update scan time
-        const elapsed = Math.floor((Date.now() - scannerState.scanStartTime) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
-        ui.setText(scannerState.timeLabel, 
-            `Time: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-        
-        // Schedule next update
-        setTimeout(updateRSSI, 100);
-    };
-    
-    updateRSSI();
+    } catch (error) {
+        console.error("Error during scanning:", error);
+        stopScanning();
+    }
 }
 
 // Handle received signal
 function handleReceivedSignal(signal) {
-    console.log("Signal received:", signal);
-    
-    // Add to history
-    const signalInfo = {
+    // Add to signal history
+    scannerState.signalHistory.push({
         frequency: signal.frequency,
         rssi: signal.rssi,
         data: signal.data,
-        timestamp: Date.now()
-    };
+        timestamp: signal.timestamp
+    });
     
-    scannerState.signalHistory.push(signalInfo);
+    // Update signal count
+    UI.setLabelText(scannerState.signalLabel, `Signals: ${scannerState.signalHistory.length}`);
     
-    // Update signal counter
-    ui.setText(scannerState.signalLabel, `Signals: ${scannerState.signalHistory.length}`);
-    
-    // Show signal notification
-    notify.flash(2, 100);
-    notify.show("Signal", `RSSI: ${signal.rssi} dBm`, 1500);
-    
-    // Analyze signal if in analyze mode
-    if (scannerState.currentMode === 'analyze') {
-        analyzeSignal(signalInfo);
-    }
+    // Show notification
+    Notification.show(`Signal: ${signal.rssi} dBm`, 1000);
 }
 
-// Change scan mode
-function changeScanMode() {
-    const modeIndex = SCAN_MODES.findIndex(mode => mode.id === scannerState.currentMode);
-    const nextIndex = (modeIndex + 1) % SCAN_MODES.length;
-    
-    scannerState.currentMode = SCAN_MODES[nextIndex].id;
-    
-    notify.show("Mode", SCAN_MODES[nextIndex].name, 1500);
-    console.log("Changed scan mode to:", SCAN_MODES[nextIndex].name);
-}
-
-// Analyze received signal
-function analyzeSignal(signalInfo) {
-    // Simple signal analysis
-    const analysis = {
-        duration: "Unknown",
-        encoding: "Unknown", 
-        protocol: "Unknown"
-    };
-    
-    // Basic pattern detection
-    if (signalInfo.data && signalInfo.data.length > 0) {
-        analysis.duration = `${signalInfo.data.length} bytes`;
-        
-        // Simple protocol detection
-        const firstByte = signalInfo.data[0];
-        if (firstByte === 0xAA || firstByte === 0x55) {
-            analysis.encoding = "Manchester";
-        } else if (firstByte === 0xFF) {
-            analysis.encoding = "PWM";
-        }
-    }
-    
-    console.log("Signal analysis:", analysis);
-}
-
-// Show scan results summary
-function showScanResults() {
-    if (scannerState.signalHistory.length === 0) {
-        notify.show("Results", "No signals detected", 2000);
-        return;
-    }
-    
-    const totalSignals = scannerState.signalHistory.length;
-    const avgRSSI = scannerState.signalHistory.reduce((sum, s) => sum + s.rssi, 0) / totalSignals;
-    const scanDuration = Math.floor((Date.now() - scannerState.scanStartTime) / 1000);
-    
-    const results = `Signals: ${totalSignals}\nAvg RSSI: ${avgRSSI.toFixed(1)} dBm\nDuration: ${scanDuration}s`;
-    
-    notify.show("Scan Results", results, 4000);
-}
-
-// Clean up when exiting
+// Cleanup function
 function cleanup() {
     console.log("Cleaning up RF Scanner...");
+    stopScanning();
+}
+
+// Event handlers
+function setupEventHandlers() {
+    System.onBackButton(function() {
+        console.log("Stopping RF Scanner...");
+        cleanup();
+        System.exit();
+    });
     
-    if (scannerState.isScanning) {
+    System.onPause(function() {
+        console.log("RF Scanner paused");
         stopScanning();
-    }
+    });
     
-    rf.stopReceive();
+    System.onResume(function() {
+        console.log("RF Scanner resumed");
+    });
 }
 
-// Initialize scanner
-if (initRFScanner()) {
-    console.log("RF Scanner ready");
-} else {
-    console.log("RF Scanner initialization failed");
-}
-
-// Export functions
-if (typeof module !== 'undefined') {
-    module.exports = {
-        initRFScanner,
-        startScanning,
-        stopScanning,
-        cleanup
-    };
-}
+// App entry point
+initRFScanner();
+setupEventHandlers();

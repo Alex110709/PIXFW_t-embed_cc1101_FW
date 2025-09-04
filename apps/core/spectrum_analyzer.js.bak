@@ -1,0 +1,267 @@
+/**
+ * Spectrum Analyzer App for T-Embed CC1101
+ * Implements RF spectrum analysis functionality similar to Bruce firmware
+ */
+
+// App state
+let appState = {
+    isAnalyzing: false,
+    startFrequency: 433000000,
+    stopFrequency: 434000000,
+    stepSize: 100000,
+    scanDelay: 10 // ms
+};
+
+// UI elements
+let ui = {};
+
+// App initialization
+function init() {
+    console.log("Spectrum Analyzer App starting...");
+    
+    try {
+        createUI();
+        updateStatus("Ready - Spectrum Analyzer");
+        
+        console.log("Spectrum Analyzer App initialized successfully");
+    } catch (error) {
+        console.error("Spectrum Analyzer App initialization error:", error);
+        Notification.showError("Spectrum Analyzer failed to start: " + error.message);
+    }
+}
+
+// Create user interface
+function createUI() {
+    const screen = UI.getScreen();
+    const container = UI.createContainer(screen);
+    UI.setContainerLayout(container, UI.LAYOUT_FLEX_COLUMN);
+    
+    // Status display
+    ui.statusLabel = UI.createLabel(container, "Spectrum Analyzer Ready");
+    UI.setLabelStyle(ui.statusLabel, {
+        fontSize: 16,
+        fontWeight: "bold",
+        textAlign: "center",
+        marginBottom: 20
+    });
+    
+    // Frequency range inputs
+    const startFreqContainer = UI.createContainer(container);
+    UI.setContainerLayout(startFreqContainer, UI.LAYOUT_FLEX_ROW);
+    
+    ui.startFreqLabel = UI.createLabel(startFreqContainer, "Start Freq (Hz):");
+    UI.setLabelStyle(ui.startFreqLabel, { minWidth: 120 });
+    
+    ui.startFreqInput = UI.createInput(startFreqContainer);
+    UI.setInputText(ui.startFreqInput, appState.startFrequency.toString());
+    UI.setInputType(ui.startFreqInput, UI.INPUT_TYPE_NUMBER);
+    
+    const stopFreqContainer = UI.createContainer(container);
+    UI.setContainerLayout(stopFreqContainer, UI.LAYOUT_FLEX_ROW);
+    
+    ui.stopFreqLabel = UI.createLabel(stopFreqContainer, "Stop Freq (Hz):");
+    UI.setLabelStyle(ui.stopFreqLabel, { minWidth: 120 });
+    
+    ui.stopFreqInput = UI.createInput(stopFreqContainer);
+    UI.setInputText(ui.stopFreqInput, appState.stopFrequency.toString());
+    UI.setInputType(ui.stopFreqInput, UI.INPUT_TYPE_NUMBER);
+    
+    // Step size input
+    const stepContainer = UI.createContainer(container);
+    UI.setContainerLayout(stepContainer, UI.LAYOUT_FLEX_ROW);
+    
+    ui.stepLabel = UI.createLabel(stepContainer, "Step Size (Hz):");
+    UI.setLabelStyle(ui.stepLabel, { minWidth: 120 });
+    
+    ui.stepInput = UI.createInput(stepContainer);
+    UI.setInputText(ui.stepInput, appState.stepSize.toString());
+    UI.setInputType(ui.stepInput, UI.INPUT_TYPE_NUMBER);
+    
+    // Scan delay input
+    const delayContainer = UI.createContainer(container);
+    UI.setContainerLayout(delayContainer, UI.LAYOUT_FLEX_ROW);
+    
+    ui.delayLabel = UI.createLabel(delayContainer, "Scan Delay (ms):");
+    UI.setLabelStyle(ui.delayLabel, { minWidth: 120 });
+    
+    ui.delayInput = UI.createInput(delayContainer);
+    UI.setInputText(ui.delayInput, appState.scanDelay.toString());
+    UI.setInputType(ui.delayInput, UI.INPUT_TYPE_NUMBER);
+    
+    // Control buttons
+    const buttonContainer = UI.createContainer(container);
+    UI.setContainerLayout(buttonContainer, UI.LAYOUT_FLEX_ROW);
+    
+    ui.startButton = UI.createButton(buttonContainer, "Start Analysis");
+    ui.stopButton = UI.createButton(buttonContainer, "Stop Analysis");
+    
+    UI.setButtonCallback(ui.startButton, startAnalysis);
+    UI.setButtonCallback(ui.stopButton, stopAnalysis);
+    
+    // Disable stop button initially
+    UI.setButtonEnabled(ui.stopButton, false);
+    
+    // Current status
+    ui.currentStatus = UI.createLabel(container, "Status: Stopped");
+    UI.setLabelStyle(ui.currentStatus, { 
+        fontSize: 14, 
+        marginTop: 20,
+        textAlign: "center"
+    });
+    
+    // RSSI display
+    ui.rssiDisplay = UI.createLabel(container, "RSSI: -- dBm");
+    UI.setLabelStyle(ui.rssiDisplay, { 
+        fontSize: 14, 
+        marginTop: 10,
+        textAlign: "center",
+        fontFamily: "monospace"
+    });
+}
+
+// Start spectrum analysis
+function startAnalysis() {
+    try {
+        // Get parameters from inputs
+        const startFreqStr = UI.getInputText(ui.startFreqInput);
+        const stopFreqStr = UI.getInputText(ui.stopFreqInput);
+        const stepStr = UI.getInputText(ui.stepInput);
+        const delayStr = UI.getInputText(ui.delayInput);
+        
+        const startFreq = parseInt(startFreqStr);
+        const stopFreq = parseInt(stopFreqStr);
+        const stepSize = parseInt(stepStr);
+        const delay = parseInt(delayStr);
+        
+        if (isNaN(startFreq) || isNaN(stopFreq) || isNaN(stepSize) || isNaN(delay)) {
+            Notification.showError("Invalid parameters. Please check all inputs.");
+            return;
+        }
+        
+        if (startFreq >= stopFreq) {
+            Notification.showError("Start frequency must be less than stop frequency.");
+            return;
+        }
+        
+        appState.startFrequency = startFreq;
+        appState.stopFrequency = stopFreq;
+        appState.stepSize = stepSize;
+        appState.scanDelay = delay;
+        
+        // Start spectrum analyzer
+        RF.startSpectrumAnalyzer(appState.startFrequency, appState.stopFrequency, appState.stepSize);
+        
+        appState.isAnalyzing = true;
+        updateStatus(`Analyzing ${formatFrequency(appState.startFrequency)} - ${formatFrequency(appState.stopFrequency)}`);
+        UI.setLabelText(ui.currentStatus, `Status: Analyzing`);
+        
+        // Update button states
+        UI.setButtonEnabled(ui.startButton, false);
+        UI.setButtonEnabled(ui.stopButton, true);
+        
+        // Start scanning loop
+        scanLoop();
+        
+        Notification.show(`Started spectrum analysis`, 2000);
+        
+    } catch (error) {
+        console.error("Failed to start analysis:", error);
+        Notification.showError("Failed to start analysis: " + error.message);
+    }
+}
+
+// Stop spectrum analysis
+function stopAnalysis() {
+    try {
+        RF.stopSpectrumAnalyzer();
+        
+        appState.isAnalyzing = false;
+        updateStatus("Analysis stopped");
+        UI.setLabelText(ui.currentStatus, "Status: Stopped");
+        
+        // Update button states
+        UI.setButtonEnabled(ui.startButton, true);
+        UI.setButtonEnabled(ui.stopButton, false);
+        
+        Notification.show("Analysis stopped", 2000);
+        
+    } catch (error) {
+        console.error("Failed to stop analysis:", error);
+        Notification.showError("Failed to stop analysis: " + error.message);
+    }
+}
+
+// Scanning loop
+function scanLoop() {
+    if (!appState.isAnalyzing) return;
+    
+    try {
+        // Get RSSI at current frequency
+        const rssi = RF.getRssiAtFrequency(appState.startFrequency);
+        UI.setLabelText(ui.rssiDisplay, `RSSI: ${rssi} dBm at ${formatFrequency(appState.startFrequency)}`);
+        
+        // Move to next frequency
+        appState.startFrequency += appState.stepSize;
+        
+        // Check if we've reached the end
+        if (appState.startFrequency > appState.stopFrequency) {
+            appState.startFrequency = appState.stopFrequency;
+        }
+        
+        // Schedule next scan
+        setTimeout(scanLoop, appState.scanDelay);
+        
+    } catch (error) {
+        console.error("Error during scanning:", error);
+        stopAnalysis();
+    }
+}
+
+// Format frequency for display
+function formatFrequency(freq) {
+    if (freq >= 1000000) {
+        return (freq / 1000000).toFixed(3) + " MHz";
+    } else if (freq >= 1000) {
+        return (freq / 1000).toFixed(3) + " kHz";
+    } else {
+        return freq + " Hz";
+    }
+}
+
+// UI update functions
+function updateStatus(status) {
+    UI.setLabelText(ui.statusLabel, status);
+}
+
+// Cleanup function
+function cleanup() {
+    console.log("Cleaning up Spectrum Analyzer App...");
+    if (appState.isAnalyzing) {
+        stopAnalysis();
+    }
+}
+
+// Event handlers
+function setupEventHandlers() {
+    System.onBackButton(function() {
+        console.log("Stopping Spectrum Analyzer App...");
+        cleanup();
+        System.exit();
+    });
+    
+    System.onPause(function() {
+        console.log("Spectrum Analyzer App paused");
+        if (appState.isAnalyzing) {
+            stopAnalysis();
+        }
+    });
+    
+    System.onResume(function() {
+        console.log("Spectrum Analyzer App resumed");
+        updateStatus("Resumed - Spectrum Analyzer");
+    });
+}
+
+// App entry point
+init();
+setupEventHandlers();
